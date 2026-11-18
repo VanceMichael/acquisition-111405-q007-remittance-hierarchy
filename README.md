@@ -1,6 +1,6 @@
 # 结算回执的申报层次与调整资料采集
 
-这是资料接收服务的独立工作副本。当前版本支持人工摘要的领取、原文归档、重复导入和归档检查；新来源的业务行为尚未接入。
+这是资料接收服务的独立工作副本。当前版本支持人工摘要的领取、原文归档、重复导入和归档检查；新来源回执已接入：按付款、申报、服务行三层保留结构化资料，金额保留来源原文精度，付款级调整不下摊，申报身份取自 sender/claimId，替换回执按 sender/control 追踪有效性，对不上的金额原样保留并定位到层。
 
 ## 环境
 
@@ -13,7 +13,7 @@ npm run demo
 
 `npm test` 是初始产品的基线回归，验证现有摘要通路、原文摘要检查、本地来源响应，以及 CLI 在独立进程中的真实领取、重复导入和持久归档检查。该产品是一次执行后退出的采集程序，不提供常驻 HTTP 应用；`npm run collect` 执行领取，`npm run provider` 仅单独启动测试来源。
 
-`npm run acceptance:source` 执行 `test/feature.test.mjs` 中完整的新来源验收。此命令在初始版本会以非零状态退出，原因是新的 source 模式尚待开发，不是环境故障，也不属于已有产品基线。验收文件及断言原样保留，没有跳过、删除或把失败转为成功。交付时需执行 `npm run verify:complete`，让基线和新来源验收同时通过；不能只用基线成功说明新功能已完成。
+`npm run acceptance:source` 执行 `test/feature.test.mjs` 中完整的新来源验收，以及 `test/source.test.mjs` 中与设计一致的边界验证。验收文件及断言原样保留，没有跳过、删除或把失败转为成功。交付时需执行 `npm run verify:complete`，让基线和新来源验收同时通过；不能只用基线成功说明新功能已完成。
 
 ```sh
 npm run verify:complete
@@ -34,7 +34,8 @@ docker run --rm --network none acquisition-remittance-hierarchy:local npm run de
 
 ## 工作入口
 
-- `src/collector.mjs` 的 `collect` 是业务入口；既有 `legacy` 模式要保留。
+- `src/collector.mjs` 的 `collect` 是业务入口；既有 `legacy` 模式要保留，新来源使用 `source` 模式。
+- `src/source.mjs` 负责新来源的领取编排；`src/remittance.mjs` 负责层次解释、各层对平与替换链有效性，均为纯函数。
 - `src/transport.mjs` 提供原文字节与请求证据，错误状态由业务层判断。
 - `src/archive.mjs` 支持内容寻址原文与记录修订，存储位置由调用方传入。
 - `provider/server.mjs` 提供允许访问的本地合成来源，路径和例子见 `docs/source-contract.md`。

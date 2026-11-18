@@ -25,6 +25,7 @@ export async function openArchive(directory) {
   if (state.schema !== 1 || !Array.isArray(state.records) || !Array.isArray(state.evidence)) {
     throw new Error('资料索引版本或结构无效');
   }
+  if (!Array.isArray(state.issues)) state.issues = [];
   for (const item of state.evidence) {
     if (!/^[a-f0-9]{64}$/.test(item.hash)) throw new Error('资料索引摘要无效');
     if (digest(await readFile(join(directory, 'raw', item.hash))) !== item.hash) throw new Error('原文摘要不匹配');

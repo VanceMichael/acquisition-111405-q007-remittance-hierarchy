@@ -345,5 +345,438 @@
         "paid": "90.00"
       }
     ]
+  },
+  {
+    "name": "multi-claim-jpy",
+    "runs": 2,
+    "requiredRequests": ["GET /advice", "GET /envelope/j1"],
+    "maximumRequests": 4,
+    "routes": [
+      {
+        "path": "/advice",
+        "body": {
+          "envelopes": [
+            {
+              "sender": "s",
+              "control": "cj",
+              "href": "/envelope/j1"
+            }
+          ]
+        },
+        "status": 200,
+        "method": "GET"
+      },
+      {
+        "path": "/envelope/j1",
+        "body": {
+          "paymentId": "pj",
+          "currency": "JPY",
+          "paid": "1497",
+          "providerAdjustments": [
+            {
+              "group": "P",
+              "reason": "fee",
+              "amount": "3"
+            }
+          ],
+          "claims": [
+            {
+              "claimId": "c1",
+              "submitted": "1200",
+              "paid": "1000",
+              "adjustments": [
+                {
+                  "group": "C",
+                  "reason": "contract",
+                  "amount": "200"
+                }
+              ],
+              "lines": [
+                {
+                  "lineId": "l1",
+                  "charge": "700",
+                  "paid": "650",
+                  "adjustments": [
+                    {
+                      "group": "C",
+                      "reason": "line-contract",
+                      "amount": "50"
+                    }
+                  ]
+                },
+                {
+                  "lineId": "l2",
+                  "charge": "500",
+                  "paid": "350",
+                  "adjustments": [
+                    {
+                      "group": "C",
+                      "reason": "line-contract",
+                      "amount": "150"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "claimId": "c2",
+              "submitted": "500",
+              "paid": "500",
+              "adjustments": [],
+              "lines": []
+            }
+          ]
+        },
+        "status": 200,
+        "method": "GET"
+      }
+    ],
+    "expected": [
+      {
+        "paymentKey": "s/pj",
+        "claimKey": "s/c1",
+        "lineId": "l1",
+        "paid": "650",
+        "balanceStatus": "balanced"
+      },
+      {
+        "paymentKey": "s/pj",
+        "claimKey": "s/c2",
+        "balanceStatus": "balanced"
+      },
+      {
+        "paymentKey": "s/pj",
+        "level": "payment",
+        "paid": "1497",
+        "balanceStatus": "balanced"
+      }
+    ],
+    "forbidden": [
+      {
+        "adjustments": [
+          {
+            "group": "P",
+            "reason": "fee",
+            "amount": "3"
+          }
+        ]
+      },
+      {
+        "claimKey": "s/c2",
+        "lineId": "l1"
+      }
+    ]
+  },
+  {
+    "name": "missing-replacement-target",
+    "routes": [
+      {
+        "path": "/advice",
+        "body": {
+          "envelopes": [
+            {
+              "sender": "s",
+              "control": "c2",
+              "href": "/envelope/r2"
+            }
+          ]
+        },
+        "status": 200,
+        "method": "GET"
+      },
+      {
+        "path": "/envelope/r2",
+        "body": {
+          "paymentId": "p1",
+          "currency": "CNY",
+          "paid": "79.90",
+          "providerAdjustments": [
+            {
+              "group": "P",
+              "reason": "fee",
+              "amount": "0.10"
+            }
+          ],
+          "claims": [
+            {
+              "claimId": "cA",
+              "submitted": "100.00",
+              "paid": "80.00",
+              "adjustments": [
+                {
+                  "group": "C",
+                  "reason": "contract",
+                  "amount": "20.00"
+                }
+              ],
+              "lines": [
+                {
+                  "lineId": "l1",
+                  "charge": "100.00",
+                  "paid": "80.00",
+                  "adjustments": []
+                }
+              ]
+            }
+          ],
+          "replaces": {
+            "sender": "s",
+            "control": "c9"
+          }
+        },
+        "status": 200,
+        "method": "GET"
+      }
+    ],
+    "expected": [
+      {
+        "paymentKey": "s/p1",
+        "claimKey": "s/cA",
+        "lineId": "l1",
+        "paid": "80.00"
+      }
+    ],
+    "complete": false,
+    "forbidden": []
+  },
+  {
+    "name": "cyclic-replacement",
+    "routes": [
+      {
+        "path": "/advice",
+        "body": {
+          "envelopes": [
+            {
+              "sender": "s",
+              "control": "c1",
+              "href": "/envelope/x1"
+            },
+            {
+              "sender": "s",
+              "control": "c2",
+              "href": "/envelope/x2"
+            }
+          ]
+        },
+        "status": 200,
+        "method": "GET"
+      },
+      {
+        "path": "/envelope/x1",
+        "body": {
+          "paymentId": "p1",
+          "currency": "CNY",
+          "paid": "89.90",
+          "providerAdjustments": [],
+          "claims": [
+            {
+              "claimId": "cA",
+              "submitted": "100.00",
+              "paid": "89.90",
+              "adjustments": [],
+              "lines": []
+            }
+          ],
+          "replaces": {
+            "sender": "s",
+            "control": "c2"
+          }
+        },
+        "status": 200,
+        "method": "GET"
+      },
+      {
+        "path": "/envelope/x2",
+        "body": {
+          "paymentId": "p1",
+          "currency": "CNY",
+          "paid": "89.90",
+          "providerAdjustments": [],
+          "claims": [
+            {
+              "claimId": "cA",
+              "submitted": "100.00",
+              "paid": "89.90",
+              "adjustments": [],
+              "lines": []
+            }
+          ],
+          "replaces": {
+            "sender": "s",
+            "control": "c1"
+          }
+        },
+        "status": 200,
+        "method": "GET"
+      }
+    ],
+    "expected": [],
+    "forbidden": [
+      {
+        "paymentKey": "s/p1"
+      }
+    ]
+  },
+  {
+    "name": "conflicting-replacements",
+    "routes": [
+      {
+        "path": "/advice",
+        "body": {
+          "envelopes": [
+            {
+              "sender": "s",
+              "control": "c1",
+              "href": "/envelope/y1"
+            },
+            {
+              "sender": "s",
+              "control": "c2",
+              "href": "/envelope/y2"
+            },
+            {
+              "sender": "s",
+              "control": "c3",
+              "href": "/envelope/y3"
+            }
+          ]
+        },
+        "status": 200,
+        "method": "GET"
+      },
+      {
+        "path": "/envelope/y1",
+        "body": {
+          "paymentId": "p1",
+          "currency": "CNY",
+          "paid": "89.90",
+          "providerAdjustments": [],
+          "claims": [
+            {
+              "claimId": "cA",
+              "submitted": "100.00",
+              "paid": "89.90",
+              "adjustments": [],
+              "lines": []
+            }
+          ]
+        },
+        "status": 200,
+        "method": "GET"
+      },
+      {
+        "path": "/envelope/y2",
+        "body": {
+          "paymentId": "p1",
+          "currency": "CNY",
+          "paid": "79.90",
+          "providerAdjustments": [],
+          "claims": [
+            {
+              "claimId": "cA",
+              "submitted": "100.00",
+              "paid": "79.90",
+              "adjustments": [],
+              "lines": []
+            }
+          ],
+          "replaces": {
+            "sender": "s",
+            "control": "c1"
+          }
+        },
+        "status": 200,
+        "method": "GET"
+      },
+      {
+        "path": "/envelope/y3",
+        "body": {
+          "paymentId": "p1",
+          "currency": "CNY",
+          "paid": "69.90",
+          "providerAdjustments": [],
+          "claims": [
+            {
+              "claimId": "cA",
+              "submitted": "100.00",
+              "paid": "69.90",
+              "adjustments": [],
+              "lines": []
+            }
+          ],
+          "replaces": {
+            "sender": "s",
+            "control": "c1"
+          }
+        },
+        "status": 200,
+        "method": "GET"
+      }
+    ],
+    "expected": [],
+    "forbidden": [
+      {
+        "paymentKey": "s/p1"
+      }
+    ]
+  },
+  {
+    "name": "unknown-currency",
+    "routes": [
+      {
+        "path": "/advice",
+        "body": {
+          "envelopes": [
+            {
+              "sender": "s",
+              "control": "c1",
+              "href": "/envelope/u1"
+            }
+          ]
+        },
+        "status": 200,
+        "method": "GET"
+      },
+      {
+        "path": "/envelope/u1",
+        "body": {
+          "paymentId": "p1",
+          "currency": "EUR",
+          "paid": "89.90",
+          "providerAdjustments": [],
+          "claims": [
+            {
+              "claimId": "cA",
+              "submitted": "100.00",
+              "paid": "89.90",
+              "adjustments": [
+                {
+                  "group": "C",
+                  "reason": "contract",
+                  "amount": "10.10"
+                }
+              ],
+              "lines": []
+            }
+          ]
+        },
+        "status": 200,
+        "method": "GET"
+      }
+    ],
+    "expected": [
+      {
+        "paymentKey": "s/p1",
+        "level": "payment",
+        "paid": "89.90",
+        "balanceStatus": "unknown"
+      }
+    ],
+    "complete": false,
+    "forbidden": [
+      {
+        "balanceStatus": "balanced"
+      }
+    ]
   }
 ]
